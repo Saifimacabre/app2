@@ -16,9 +16,8 @@ def load_data():
 fertilizer_df, crop_recommendation_df = load_data()
 
 # --------------------------
-# LABEL ENCODING FOR FERTILIZER DATA
+# Label Encoding for Fertilizer Data
 # --------------------------
-
 soil_type_encoder = LabelEncoder()
 fertilizer_df['Soil Type Enc'] = soil_type_encoder.fit_transform(fertilizer_df['Soil Type'])
 
@@ -29,16 +28,14 @@ fert_name_encoder = LabelEncoder()
 fertilizer_df['Fertilizer Name Enc'] = fert_name_encoder.fit_transform(fertilizer_df['Fertilizer Name'])
 
 # --------------------------
-# LABEL ENCODING FOR CROP RECOMMENDATION DATA
+# Label Encoding for Crop Data
 # --------------------------
-
 crop_label_encoder = LabelEncoder()
 crop_recommendation_df['label Enc'] = crop_label_encoder.fit_transform(crop_recommendation_df['label'])
 
 # --------------------------
-# TRAIN MODELS
+# Train Models
 # --------------------------
-
 @st.cache_resource
 def train_models():
     # Crop model
@@ -65,59 +62,59 @@ def train_models():
 crop_model, fert_model, crop_features, fert_features, crop_acc, fert_acc, crop_cm, fert_cm = train_models()
 
 # --------------------------
-# UI
+# UI Section
 # --------------------------
-
 st.title("🌾 Crop and Fertilizer Prediction App")
 
-choice = st.selectbox("What do you want to predict?", ["Crop", "Fertilizer"])
+choice = st.radio("Choose Prediction Type:", ["Crop", "Fertilizer"])
 
-st.subheader("Enter the following parameters:")
-
-# Inputs
-temp = st.number_input("🌡️ Temperature")  # corresponds to 'Temparature' in fertilizer_df (note typo)
-humidity = st.number_input("💧 Humidity")
-moisture = st.number_input("🧪 Moisture")
-
-soil_type_str = st.selectbox("🌱 Soil Type", fertilizer_df['Soil Type'].unique())
-crop_type_str = st.selectbox("🌾 Crop Type", fertilizer_df['Crop Type'].unique())
-
-nitrogen = st.number_input("🧬 Nitrogen")
-potassium = st.number_input("🧪 Potassium")
-phosphorous = st.number_input("🧪 Phosphorous")
-
-ph = st.number_input("pH")
-rainfall = st.number_input("🌧️ Rainfall")
+st.subheader("📝 Input Parameters")
 
 # Encode dropdowns
+soil_type_str = st.selectbox("🌱 Soil Type", fertilizer_df['Soil Type'].unique())
+crop_type_str = st.selectbox("🌾 Crop Type", fertilizer_df['Crop Type'].unique())
 soil_type_encoded = soil_type_encoder.transform([soil_type_str])[0]
 crop_type_encoded = crop_type_encoder.transform([crop_type_str])[0]
 
-# Prediction and Output
-if st.button("🔍 Predict"):
-    if choice == "Crop":
-        input_df = pd.DataFrame([[nitrogen, phosphorous, potassium, temp, humidity, ph, rainfall]],
+if choice == "Crop":
+    nitrogen = st.number_input("🧬 Nitrogen")
+    phosphorous = st.number_input("🧪 Phosphorous")
+    potassium = st.number_input("🧪 Potassium")
+    temperature = st.number_input("🌡️ Temperature")
+    humidity = st.number_input("💧 Humidity")
+    ph = st.number_input("🔬 pH")
+    rainfall = st.number_input("🌧️ Rainfall")
+
+    if st.button("🔍 Predict Crop"):
+        input_df = pd.DataFrame([[nitrogen, phosphorous, potassium, temperature, humidity, ph, rainfall]],
                                 columns=crop_features)
         prediction_enc = crop_model.predict(input_df)[0]
         prediction = crop_label_encoder.inverse_transform([prediction_enc])[0]
-        st.success(f"🌾 Recommended Crop: **{prediction}**")
+        st.success(f"🌿 Recommended Crop: **{prediction}**")
+        st.write(f"📈 Accuracy: `{crop_acc * 100:.2f}%`")
 
-        st.write(f"📈 Model Accuracy: `{crop_acc * 100:.2f}%`")
-        st.subheader("Confusion Matrix:")
+        st.subheader("📊 Confusion Matrix")
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(crop_cm, annot=False, cmap="Blues", fmt="d", ax=ax)
+        sns.heatmap(crop_cm, cmap='Blues', ax=ax)
         st.pyplot(fig)
 
-    else:
+elif choice == "Fertilizer":
+    temp = st.number_input("🌡️ Temperature (for fertilizer)")
+    humidity = st.number_input("💧 Humidity")
+    moisture = st.number_input("🧪 Moisture")
+    nitrogen = st.number_input("🧬 Nitrogen")
+    potassium = st.number_input("🧪 Potassium")
+    phosphorous = st.number_input("🧪 Phosphorous")
+
+    if st.button("🔍 Predict Fertilizer"):
         input_df = pd.DataFrame([[temp, humidity, moisture, soil_type_encoded, crop_type_encoded,
-                                  nitrogen, potassium, phosphorous]],
-                                columns=fert_features)
+                                  nitrogen, potassium, phosphorous]], columns=fert_features)
         prediction_enc = fert_model.predict(input_df)[0]
         prediction = fert_name_encoder.inverse_transform([prediction_enc])[0]
         st.success(f"🧪 Recommended Fertilizer: **{prediction}**")
+        st.write(f"📈 Accuracy: `{fert_acc * 100:.2f}%`")
 
-        st.write(f"📈 Model Accuracy: `{fert_acc * 100:.2f}%`")
-        st.subheader("Confusion Matrix:")
+        st.subheader("📊 Confusion Matrix")
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(fert_cm, annot=False, cmap="Greens", fmt="d", ax=ax)
+        sns.heatmap(fert_cm, cmap='Greens', ax=ax)
         st.pyplot(fig)
